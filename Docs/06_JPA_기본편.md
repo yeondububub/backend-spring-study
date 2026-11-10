@@ -227,3 +227,62 @@ public class Member {
 2. **SEQUENCE**: DB 시퀀스 오브젝트 사용 (Oracle, H2). `@SequenceGenerator`로 `allocationSize` 설정하여 성능 최적화.
 3. **TABLE**: 키 생성 전용 테이블 사용 (모든 DB 적용 가능하나 성능 불리).
 4. **AUTO**: 방언에 따라 위 3가지 중 자동 선택.
+
+## 5. 연관관계 매핑 기초
+
+### 5.1 연관관계가 필요한 이유
+
+테이블은 **외래 키(FK)**로 조인을 하고, 객체는 **참조**를 사용함. 외래 키 필드를 객체에 그대로 저장하면 객체지향적인 그래프 탐색이 불가능해짐.
+
+### 5.2 단방향 연관관계 (`@ManyToOne`, `@JoinColumn`)
+
+```java
+@Entity
+public class Member {
+    @Id @GeneratedValue
+    private Long id;
+
+    private String username;
+
+    @ManyToOne
+    @JoinColumn(name = "TEAM_ID") // FK 컬럼 매핑
+    private Team team;
+}
+```
+
+### 5.3 양방향 연관관계와 연관관계의 주인 (Owner)
+
+```
++-------------------------------------------------------------------------+
+|                         양방향 연관관계 구조                                 |
++------------------------------------+------------------------------------+
+|  Member (외래키 소유 / 주인)           |  Team (가짜 매핑 / 읽기 전용)          |
++------------------------------------+------------------------------------+
+|  @ManyToOne                        |  @OneToMany(mappedBy = "team")     |
+|  @JoinColumn(name = "TEAM_ID")     |  private List<Member> members;     |
+|  private Team team;                |                                    |
++------------------------------------+------------------------------------+
+```
+
+#### 양방향 매핑 규칙:
+
+1. 객체의 두 관계 중 하나를 **연관관계의 주인**으로 지정해야 함.
+2. **외래 키(FK)가 위치한 곳을 주인으로 정함!** (예: `Member.team`)
+3. **주인만이 외래 키를 등록 및 수정**할 수 있음.
+4. **주인이 아닌 쪽은 `mappedBy` 속성으로 주인을 지정**하며, 읽기만 가능함.
+
+### 5.4 양방향 매핑 시 주의사항 & 편의 메서드
+
+- 순수 객체 상태를 고려하여 **양쪽 모두에 값을 세팅**해야 함.
+- **연관관계 편의 메서드**를 작성하여 실수를 방지함.
+
+```java
+// Member 엔티티 내부의 연관관계 편의 메서드
+public void changeTeam(Team team) {
+    this.team = team;
+    team.getMembers().add(this); // 양방향 연관관계 동시 설정
+}
+```
+
+> [!IMPORTANT] 
+> 양방향 매핑 시 `toString()`, Lombok, JSON 변환 라이브러리에서 무한 루프를 조심해야 한다.
