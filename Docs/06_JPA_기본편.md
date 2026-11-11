@@ -311,3 +311,52 @@ public void changeTeam(Team team) {
 ```
 
 `@ManyToMany`는 중간 테이블에 추가 컬럼(주문 수량, 주문 일시 등)을 넣을 수 없고 은닉된 쿼리가 나가므로, **중간 연결 엔티티(`OrderItem`)를 만들어 `@OneToMany`, `@ManyToOne`으로 매핑**함.
+
+## 7. 고급 매핑 (Inheritance & MappedSuperclass)
+
+### 7.1 상속관계 매핑 전략
+관계형 데이터베이스의 **슈퍼타입 서브타입 관계** 모델링 기법을 객체 상속과 매핑함.
+
+**상속관계 매핑 전략 비교**
+
+| 전략 | 장점 | 단점 |
+| :--- | :--- | :--- |
+| **조인 전략**<br>(`JOINED`) | 정규화, 저장공간 효율, FK 무결성<br>*(가장 정석적인 권장 전략)* | 조인 쿼리, INSERT 2번 |
+| **단일 테이블**<br>(`SINGLE_TABLE`) | 조인이 없어 조회 성능 빠름<br>*(기본값)* | 자식 컬럼 NULL 허용,<br>테이블이 커질 수 있음 |
+| **구현 클래스**<br>(`TABLE_PER_CLASS`) | 서브타입 구분 명확 | UNION 쿼리 발생,<br>**실무 비추천!** |
+
+
+```java
+@Entity
+@Inheritance(strategy = InheritanceType.JOINED) // 조인 전략 선택
+@DiscriminatorColumn(name = "DTYPE") // 구분 컬럼
+public abstract class Item {
+    @Id @GeneratedValue
+    private Long id;
+    private String name;
+    private int price;
+}
+
+@Entity
+@DiscriminatorValue("B")
+public class Book extends Item {
+    private String author;
+    private String isbn;
+}
+```
+
+### 7.2 `@MappedSuperclass`
+
+- 공통 매핑 정보(예: `createdDate`, `lastModifiedDate`)가 필요할 때 부모 클래스에 선언.
+- **엔티티가 아니며 테이블과 매핑되지 않음.** 단순히 매핑 정보만 자식에게 제공.
+- 직접 생성할 일이 없으므로 **추상 클래스(abstract class)**로 선언 권장.
+
+```java
+@MappedSuperclass
+public abstract class BaseEntity {
+    private String createdBy;
+    private LocalDateTime createdDate;
+    private String lastModifiedBy;
+    private LocalDateTime lastModifiedDate;
+}
+```
