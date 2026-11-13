@@ -413,3 +413,57 @@ private List<Child> children = new ArrayList<>();
 
 > [!NOTE]
 > `CascadeType.ALL + orphanRemoval = true`를 동시에 사용하면 부모 엔티티를 통해 자식의 생명주기를 완벽하게 관리할 수 있습니다. (DDD Aggregate Root 패턴)
+
+## 9. 값 타입 (Value Types)
+
+### 9.1 JPA 데이터 타입 분류
+
+1. **엔티티 타입 (`@Entity`)**: 식별자(`@Id`)가 있어 추적 가능, 생명주기 존재.
+2. **값 타입**: 식별자가 없고 값만 존재, 변경 시 추적 불가.
+
+### 9.2 임베디드 타입 (Embedded Type)
+
+기본 값 타입을 모아서 만든 복합 값 타입.
+- `@Embeddable`: 값 타입을 정의하는 곳에 표시.
+- `@Embedded`: 값 타입을 사용하는 곳에 표시.
+- **기본 생성자 필수!**
+
+```java
+@Embeddable
+public class Address {
+    private String city;
+    private String street;
+    private String zipcode;
+
+    public Address() {} // 기본 생성자
+}
+
+@Entity
+public class Member {
+    @Id @GeneratedValue
+    private Long id;
+
+    @Embedded
+    private Address homeAddress;
+}
+```
+
+### 9.3 값 타입과 불변 객체 (Immutable Object)
+
+- 임베디드 타입을 여러 엔티티에서 공유하면 **부작용(Side Effect)** 발생!
+- 해결책: **Setter를 제거하거나 private으로 만들어 불변 객체로 설계**하고, 변경이 필요한 경우 인스턴스를 새로 생성하여 교체함.
+
+### 9.4 값 타입 컬렉션 (`@ElementCollection`)
+
+값 타입을 하나 이상 저장할 때 사용하며, 별도의 테이블을 생성하여 관리함.
+
+```java
+@ElementCollection
+@CollectionTable(name = "FAVORITE_FOOD", joinColumns = @JoinColumn(name = "MEMBER_ID"))
+private Set<String> favoriteFoods = new HashSet<>();
+```
+
+> [!WARNING]  
+> **값 타입 컬렉션의 제약사항 및 대안**
+> - 값 타입 컬렉션에 변경 사항이 발생하면 **주인 엔티티와 연관된 모든 데이터를 삭제하고 현재 값을 모두 다시 저장**하는 심각한 성능 문제가 발생할 수 있습니다.
+> - **실무 대안**: 값 타입 컬렉션 대신 **일대다 엔티티를 만들고(`AddressEntity`) 영속성 전이+고아 객체 제어를 적용**하는 것을 권장합니다.
