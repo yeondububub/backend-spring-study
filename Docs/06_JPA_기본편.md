@@ -467,3 +467,79 @@ private Set<String> favoriteFoods = new HashSet<>();
 > **값 타입 컬렉션의 제약사항 및 대안**
 > - 값 타입 컬렉션에 변경 사항이 발생하면 **주인 엔티티와 연관된 모든 데이터를 삭제하고 현재 값을 모두 다시 저장**하는 심각한 성능 문제가 발생할 수 있습니다.
 > - **실무 대안**: 값 타입 컬렉션 대신 **일대다 엔티티를 만들고(`AddressEntity`) 영속성 전이+고아 객체 제어를 적용**하는 것을 권장합니다.
+
+## 10. 객체지향 쿼리 언어 (JPQL)
+
+### 10.1 JPQL 개요
+
+- **엔티티 객체를 대상으로 검색하는 객체지향 쿼리 언어**.
+- 특정 DB SQL에 의존하지 않고 방언(Dialect)에 맞춰 적절한 SQL로 변환됨.
+
+```java
+String jpql = "select m from Member m where m.username like '%kim%'";
+List<Member> result = em.createQuery(jpql, Member.class).getResultList();
+```
+
+### 10.2 파라미터 바인딩
+위치 기반(`?1`)은 가독성 및 유지보수상 위험하므로 **이름 기반(`:username`) 바인딩 사용 필수!**
+
+```java
+TypedQuery<Member> query = em.createQuery(
+    "select m from Member m where m.username = :username", Member.class);
+query.setParameter("username", "MemberA");
+```
+
+### 10.3 프로젝션과 페이징 API
+- **프로젝션**: SELECT 절에 조회 대상을 지정 (`SELECT m.username, m.age FROM Member m`). DTO로 바로 조회 시 `new` 명령어 사용.
+- **페이징 API**: DB 방언에 맞춰 페이징 처리 SQL 자동 생성.
+
+```java
+List<Member> resultList = em.createQuery("select m from Member m order by m.age desc", Member.class)
+    .setFirstResult(0)  // 조회 시작 위치 (0부터 시작)
+    .setMaxResults(10)  // 조회할 데이터 수
+    .getResultList();
+```
+
+### 10.4 페치 조인 (Fetch Join)
+
+```
++---------------------------------------------------------------------------+
+|                      페치 조인 (Fetch Join) 메커니즘                           |
++---------------------------------------------------------------------------+
+| [JPQL] select m from Member m join fetch m.team                           |
+| [SQL ] SELECT M.*, T.* FROM MEMBER M INNER JOIN TEAM T ON M.TEAM_ID=T.ID  |
++---------------------------------------------------------------------------+
+```
+
+- 연관된 엔티티나 컬렉션을 **SQL 한 번에 함께 조회**하는 기능.
+- **N+1 문제를 해결하는 대표적인 성능 최적화 방법!**
+
+```java
+String query = "select m from Member m join fetch m.team";
+List<Member> members = em.createQuery(query, Member.class).getResultList();
+
+for (Member member : members) {
+    // 이미 함께 조회되었으므로 지연 로딩 발생 안함!
+    System.out.println("member = " + member.getUsername() + ", team = " + member.getTeam().getName());
+}
+```
+
+> [!WARNING]  
+> **페치 조인의 한계와 주의사항**
+> 1. **페치 조인 대상에는 별칭(alias)을 주지 말 것.**
+> 2. **둘 이상의 컬렉션은 페치 조인 할 수 없음.**
+> 3. **컬렉션을 페치 조인하면 페이징 API(`setFirstResult`, `setMaxResults`)를 사용할 수 없음!** (메모리 페이징으로 인한 OutOfMemory 위험)
+
+### 10.5 벌크 연산 (Bulk Operations)
+
+쿼리 한 번으로 여러 테이블 로우를 변경하는 기능 (`executeUpdate()`).
+
+```java
+int resultCount = em.createQuery(
+    "update Product p set p.price = p.price * 1.1 where p.stockAmount < :stockAmount")
+    .setParameter("stockAmount", 10)
+    .executeUpdate();
+```
+
+> [!IMPORTANT]  
+> **벌크 연산 실행 후에는 반드시 `em.clear()`를 통해 영속성 컨텍스트를 초기화해야 합니다.** (벌크 연산은 영속성 컨텍스트를 무시하고 DB에 직접 쿼리하므로 1차 캐시와의 데이터 불일치 방지 목적)
