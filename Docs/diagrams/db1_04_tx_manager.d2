@@ -1,0 +1,22 @@
+direction: down
+
+ptm: "<<interface>>\nPlatformTransactionManager" {
+  style.fill: "#E8F4FD"
+  style.stroke: "#2B7DE9"
+  style.border-radius: 8
+}
+
+dstm: "DataSourceTransactionManager\n(JDBC / JdbcTemplate 사용)" {
+  style.fill: "#E8F8F0"
+  style.stroke: "#27AE60"
+  style.border-radius: 8
+}
+
+jpatm: "JpaTransactionManager\n(JPA / Hibernate 사용)" {
+  style.fill: "#FFF4E5"
+  style.stroke: "#E67E22"
+  style.border-radius: 8
+}
+
+dstm -> ptm: "구현" {style.stroke-dash: 3}
+jpatm -> ptm: "구현" {style.stroke-dash: 3}

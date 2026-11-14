@@ -1,0 +1,16 @@
+direction: right
+
+proxy: "MemberProxy (가짜 객체)" {
+  style.fill: "#FFF4E5"
+  style.stroke: "#E67E22"
+  style.border-radius: 8
+  target: "Entity target"
+}
+
+real: "실제 Member 엔티티" {
+  style.fill: "#E8F8F0"
+  style.stroke: "#27AE60"
+  style.border-radius: 8
+}
+
+proxy.target -> real: "초기화 시 참조 위임"

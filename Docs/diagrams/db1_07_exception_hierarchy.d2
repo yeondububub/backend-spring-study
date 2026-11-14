@@ -1,0 +1,43 @@
+direction: down
+
+throwable: "Throwable" {
+  style.fill: "#F5F7FA"
+  style.stroke: "#5C6B73"
+  style.border-radius: 8
+}
+
+error: "Error\n(OutOfMemoryError 등)" {
+  style.fill: "#FDEDEC"
+  style.stroke: "#E74C3C"
+  style.border-radius: 8
+}
+
+exception: "Exception\n(체크 예외 최상위)" {
+  style.fill: "#FFF4E5"
+  style.stroke: "#E67E22"
+  style.border-radius: 8
+}
+
+checked: "Checked Exception\n(IOException, SQLException 등)" {
+  style.fill: "#FFF9E6"
+  style.stroke: "#D4AC0D"
+  style.border-radius: 8
+}
+
+runtime: "RuntimeException\n(언체크 예외 최상위)" {
+  style.fill: "#E8F4FD"
+  style.stroke: "#2B7DE9"
+  style.border-radius: 8
+}
+
+unchecked_sub: "NullPointerException,\nIllegalArgumentException 등" {
+  style.fill: "#EBF5FB"
+  style.stroke: "#5DADE2"
+  style.border-radius: 8
+}
+
+throwable -> error
+throwable -> exception
+exception -> checked
+exception -> runtime
+runtime -> unchecked_sub

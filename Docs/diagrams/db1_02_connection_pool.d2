@@ -1,0 +1,24 @@
+direction: right
+
+app: "애플리케이션 서버" {
+  style.fill: "#F5F7FA"
+  style.stroke: "#5C6B73"
+  style.border-radius: 8
+  pool: "커넥션 풀 (HikariCP)" {
+    style.fill: "#E8F4FD"
+    style.stroke: "#2B7DE9"
+    style.border-radius: 6
+    c1: "conn1"
+    c2: "conn2"
+    c10: "... conn10"
+  }
+}
+
+db: "DB 서버" {
+  style.fill: "#FFF4E5"
+  style.stroke: "#E67E22"
+  style.border-radius: 8
+  session: "DB 세션"
+}
+
+app.pool -> db.session: "TCP/IP 연결 유지"

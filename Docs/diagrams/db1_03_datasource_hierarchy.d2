@@ -1,0 +1,29 @@
+direction: down
+
+ds: "<<interface>>\nDataSource" {
+  style.fill: "#E8F4FD"
+  style.stroke: "#2B7DE9"
+  style.border-radius: 8
+}
+
+dm: "DriverManagerDataSource\n(매번 신규 커넥션 생성)" {
+  style.fill: "#F5F7FA"
+  style.stroke: "#5C6B73"
+  style.border-radius: 8
+}
+
+hikari: "HikariDataSource\n(HikariCP 커넥션 풀)" {
+  style.fill: "#E8F8F0"
+  style.stroke: "#27AE60"
+  style.border-radius: 8
+}
+
+dbcp2: "DBCP2DataSource" {
+  style.fill: "#F5F7FA"
+  style.stroke: "#5C6B73"
+  style.border-radius: 8
+}
+
+dm -> ds: "구현" {style.stroke-dash: 3}
+hikari -> ds: "구현" {style.stroke-dash: 3}
+dbcp2 -> ds: "구현" {style.stroke-dash: 3}

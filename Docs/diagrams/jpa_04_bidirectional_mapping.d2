@@ -1,0 +1,18 @@
+direction: right
+
+member: "Member (외래키 소유 / 주인)" {
+  style.fill: "#E8F4FD"
+  style.stroke: "#2B7DE9"
+  style.border-radius: 8
+  code: "@ManyToOne\n@JoinColumn(name = \"TEAM_ID\")\nprivate Team team;"
+}
+
+team: "Team (가짜 매핑 / 읽기 전용)" {
+  style.fill: "#FFF4E5"
+  style.stroke: "#E67E22"
+  style.border-radius: 8
+  code: "@OneToMany(mappedBy = \"team\")\nprivate List<Member> members;"
+}
+
+member -> team: "외래 키(FK) 관리"
+team -> member: "mappedBy (읽기 전용)" {style.stroke-dash: 3}

@@ -1,0 +1,29 @@
+direction: right
+
+service: "Service Layer" {
+  style.fill: "#F5F7FA"
+  style.stroke: "#5C6B73"
+  style.border-radius: 8
+}
+
+repo_if: "<<interface>>\nItemRepository" {
+  style.fill: "#E8F4FD"
+  style.stroke: "#2B7DE9"
+  style.border-radius: 8
+}
+
+adapter: "JpaItemRepositoryV2\n(Adapter)" {
+  style.fill: "#E8F8F0"
+  style.stroke: "#27AE60"
+  style.border-radius: 8
+}
+
+sdj: "SpringDataJpaItemRepository\n(Proxy)" {
+  style.fill: "#FFF4E5"
+  style.stroke: "#E67E22"
+  style.border-radius: 8
+}
+
+service -> repo_if
+adapter -> repo_if: "구현" {style.stroke-dash: 3}
+adapter -> sdj: "위임"

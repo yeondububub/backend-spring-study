@@ -1,0 +1,35 @@
+direction: down
+
+app: "애플리케이션 로직" {
+  style.fill: "#E8F4FD"
+  style.stroke: "#2B7DE9"
+  style.border-radius: 8
+}
+
+jdbc: "JDBC 표준 인터페이스" {
+  style.fill: "#F5F7FA"
+  style.stroke: "#5C6B73"
+  style.border-radius: 8
+  conn: "Connection (연결)"
+  stmt: "Statement (SQL 전달)"
+  rs: "ResultSet (결과 응답)"
+}
+
+drivers: "" {
+  style.stroke: "transparent"
+  style.fill: "transparent"
+  h2: "H2 DB 드라이버" {
+    style.fill: "#FFF4E5"
+    style.stroke: "#E67E22"
+    style.border-radius: 8
+  }
+  mysql: "MySQL DB 드라이버" {
+    style.fill: "#FFF4E5"
+    style.stroke: "#E67E22"
+    style.border-radius: 8
+  }
+}
+
+app -> jdbc
+jdbc -> drivers.h2
+jdbc -> drivers.mysql

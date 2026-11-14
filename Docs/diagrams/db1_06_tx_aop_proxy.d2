@@ -1,0 +1,31 @@
+direction: down
+
+client: "클라이언트" {
+  style.fill: "#F5F7FA"
+  style.stroke: "#5C6B73"
+  style.border-radius: 8
+}
+
+proxy: "MemberService AOP 프록시" {
+  style.fill: "#E8F4FD"
+  style.stroke: "#2B7DE9"
+  style.border-radius: 8
+  step: "1. 트랜잭션 시작\n3. 성공 시 commit / 실패 시 rollback"
+}
+
+target: "실제 MemberService (Target)" {
+  style.fill: "#E8F8F0"
+  style.stroke: "#27AE60"
+  style.border-radius: 8
+  logic: "순수 비즈니스 로직 수행"
+}
+
+repo: "MemberRepository" {
+  style.fill: "#FFF4E5"
+  style.stroke: "#E67E22"
+  style.border-radius: 8
+}
+
+client -> proxy
+proxy -> target: "2. target.accountTransfer()"
+target -> repo

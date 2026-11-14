@@ -1,0 +1,27 @@
+direction: right
+
+app: "Application" {
+  style.fill: "#F5F7FA"
+  style.stroke: "#5C6B73"
+  style.border-radius: 8
+}
+
+jpa: "JPA (표준 API)" {
+  style.fill: "#E8F4FD"
+  style.stroke: "#2B7DE9"
+  style.border-radius: 8
+}
+
+hibernate: "Hibernate (구현체)" {
+  style.fill: "#E8F8F0"
+  style.stroke: "#27AE60"
+  style.border-radius: 8
+}
+
+db: "JDBC / DB" {
+  style.fill: "#FFF4E5"
+  style.stroke: "#E67E22"
+  style.border-radius: 8
+}
+
+app -> jpa -> hibernate -> db

@@ -1,0 +1,23 @@
+direction: down
+
+client: "클라이언트" {
+  style.fill: "#F5F7FA"
+  style.stroke: "#5C6B73"
+  style.border-radius: 8
+}
+
+proxy: "Transaction AOP Proxy" {
+  style.fill: "#E8F4FD"
+  style.stroke: "#2B7DE9"
+  style.border-radius: 8
+  tx_steps: "1. TransactionManager.getTransaction()\n2. setAutoCommit(false) & 동기화 매니저 보관\n4. 로직 완료 후 commit / rollback"
+}
+
+target: "Target Service\n(비즈니스 로직)" {
+  style.fill: "#E8F8F0"
+  style.stroke: "#27AE60"
+  style.border-radius: 8
+}
+
+client -> proxy
+proxy -> target: "3. 실제 서비스 로직 호출"

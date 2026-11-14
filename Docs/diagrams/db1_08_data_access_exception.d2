@@ -1,0 +1,36 @@
+direction: down
+
+dae: "DataAccessException\n(스프링 데이터 접근 예외 최상위)" {
+  style.fill: "#E8F4FD"
+  style.stroke: "#2B7DE9"
+  style.border-radius: 8
+}
+
+non_transient: "NonTransient 예외\n(재시도해도 실패)" {
+  style.fill: "#FDEDEC"
+  style.stroke: "#E74C3C"
+  style.border-radius: 8
+}
+
+transient: "Transient 예외\n(재시도 시 성공 가능)" {
+  style.fill: "#FFF4E5"
+  style.stroke: "#E67E22"
+  style.border-radius: 8
+}
+
+non_sub: "BadSqlGrammarException,\nDuplicateKeyException 등" {
+  style.fill: "#F9EBEA"
+  style.stroke: "#C0392B"
+  style.border-radius: 8
+}
+
+trans_sub: "QueryTimeoutException,\nLockAcquisitionFailureException 등" {
+  style.fill: "#FEF5E7"
+  style.stroke: "#D35400"
+  style.border-radius: 8
+}
+
+dae -> non_transient
+dae -> transient
+non_transient -> non_sub
+transient -> trans_sub

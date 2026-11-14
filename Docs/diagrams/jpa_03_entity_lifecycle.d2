@@ -1,0 +1,30 @@
+direction: right
+
+new: "비영속 (New)\n컨텍스트와 무관" {
+  style.fill: "#F5F7FA"
+  style.stroke: "#5C6B73"
+  style.border-radius: 8
+}
+
+managed: "영속 (Managed)\n영속성 컨텍스트 관리" {
+  style.fill: "#E8F8F0"
+  style.stroke: "#27AE60"
+  style.border-radius: 8
+}
+
+detached: "준영속 (Detached)\n컨텍스트에서 분리" {
+  style.fill: "#FFF4E5"
+  style.stroke: "#E67E22"
+  style.border-radius: 8
+}
+
+removed: "삭제 (Removed)\n삭제 예정 상태" {
+  style.fill: "#FDEDEC"
+  style.stroke: "#E74C3C"
+  style.border-radius: 8
+}
+
+new -> managed: "em.persist()"
+managed -> detached: "em.detach() / clear()"
+detached -> managed: "em.merge()"
+managed -> removed: "em.remove()"

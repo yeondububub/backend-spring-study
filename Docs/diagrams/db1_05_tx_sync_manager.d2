@@ -1,0 +1,10 @@
+shape: sequence_diagram
+
+service: "서비스 계층"
+tx_mgr: "트랜잭션 동기화 매니저\n(ThreadLocal)"
+repo: "리포지토리 계층"
+
+service -> tx_mgr: "1. transactionManager.getTransaction()\n(커넥션 생성 & setAutoCommit(false))"
+tx_mgr -> tx_mgr: "2. ThreadLocal에 커넥션 보관"
+service -> repo: "3. businessLogic()"
+repo -> tx_mgr: "4. DataSourceUtils.getConnection()\n(ThreadLocal에서 커넥션 조회)"

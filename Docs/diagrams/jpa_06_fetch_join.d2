@@ -1,0 +1,15 @@
+direction: down
+
+jpql: "[JPQL]\nselect m from Member m join fetch m.team" {
+  style.fill: "#E8F4FD"
+  style.stroke: "#2B7DE9"
+  style.border-radius: 8
+}
+
+sql: "[SQL]\nSELECT M.*, T.* FROM MEMBER M INNER JOIN TEAM T ON M.TEAM_ID = T.ID" {
+  style.fill: "#E8F8F0"
+  style.stroke: "#27AE60"
+  style.border-radius: 8
+}
+
+jpql -> sql: "SQL 한 번에 연관 엔티티 함께 조회"
