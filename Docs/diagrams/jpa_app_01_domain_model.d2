@@ -1,0 +1,36 @@
+direction: down
+
+member: "Member (회원)" {
+  style.fill: "#E8F4FD"
+  style.stroke: "#2B7DE9"
+  style.border-radius: 8
+}
+
+order: "Order (주문)" {
+  style.fill: "#E8F8F0"
+  style.stroke: "#27AE60"
+  style.border-radius: 8
+}
+
+delivery: "Delivery (배송)" {
+  style.fill: "#F5F7FA"
+  style.stroke: "#5C6B73"
+  style.border-radius: 8
+}
+
+order_item: "OrderItem (주문상품)" {
+  style.fill: "#FFF4E5"
+  style.stroke: "#E67E22"
+  style.border-radius: 8
+}
+
+item: "Item (상품)\nBook / Album / Movie" {
+  style.fill: "#F5F7FA"
+  style.stroke: "#5C6B73"
+  style.border-radius: 8
+}
+
+member -> order: "1 : N"
+order -> delivery: "1 : 1"
+order -> order_item: "1 : N"
+order_item -> item: "N : 1"

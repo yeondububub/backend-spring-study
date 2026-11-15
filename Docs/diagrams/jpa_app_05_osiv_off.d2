@@ -1,0 +1,22 @@
+direction: right
+
+non_tx: "준영속 상태 (커넥션 반환 완료, 지연 로딩 불가)" {
+  style.fill: "#FDEDEC"
+  style.stroke: "#E74C3C"
+  style.border-radius: 8
+  filter: "Filter / Interceptor"
+  ctrl: "Controller"
+  view: "View"
+  filter -> ctrl -> view
+}
+
+tx: "영속성 컨텍스트 & 트랜잭션 생존 범위" {
+  style.fill: "#E8F8F0"
+  style.stroke: "#27AE60"
+  style.border-radius: 8
+  svc: "Service"
+  repo: "Repository"
+  svc -> repo
+}
+
+non_tx.ctrl -> tx.svc: "트랜잭션 진입/종료"

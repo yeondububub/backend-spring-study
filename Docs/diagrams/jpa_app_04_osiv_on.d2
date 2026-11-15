@@ -1,0 +1,29 @@
+direction: down
+
+scope: "영속성 컨텍스트 & DB 커넥션 생존 범위 (요청 시작 ~ 응답 종료)" {
+  style.fill: "#FFF9E6"
+  style.stroke: "#D4AC0D"
+  style.border-radius: 8
+  direction: right
+
+  non_tx: "영속 상태, 수정 불가 (트랜잭션 밖)" {
+    style.fill: "#F5F7FA"
+    style.stroke: "#5C6B73"
+    style.border-radius: 6
+    filter: "Filter / Interceptor"
+    ctrl: "Controller"
+    view: "View"
+    filter -> ctrl -> view
+  }
+
+  tx: "트랜잭션 범위 (영속 상태, 수정 가능)" {
+    style.fill: "#E8F8F0"
+    style.stroke: "#27AE60"
+    style.border-radius: 6
+    svc: "Service"
+    repo: "Repository"
+    svc -> repo
+  }
+
+  non_tx.ctrl -> tx.svc
+}
