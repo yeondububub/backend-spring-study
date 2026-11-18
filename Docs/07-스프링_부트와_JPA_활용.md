@@ -72,3 +72,68 @@ logging:
    - 스프링 부트 기본 물리 네이밍 전략(`CamelCaseToUnderscoresNamingStrategy` / `SpringPhysicalNamingStrategy`)은 카멜 케이스(`memberPoint`)를 스네이크 케이스(`member_point`) 소문자로 자동 변환한다.
 5. **값 타입은 불변 객체로 설계**
    - `@Embeddable` 클래스는 `@Setter`를 제거하고 생성자로만 초기화한다. JPA 리플렉션을 위해 `protected` 기본 생성자를 둔다.
+
+## 3. 애플리케이션 구현 및 도메인 개발
+
+### 3.1 애플리케이션 계층형 아키텍처
+
+![계층형 아키텍처](./images/jpa_app_02_architecture.svg)
+
+* **Controller (`web`)**: 웹 요청 처리 및 폼/DTO 검증
+* **Service (`service`)**: 비즈니스 로직 위임 및 트랜잭션 경계 관리 (`@Transactional(readOnly = true)` 기본 적용, 쓰기 메서드만 `@Transactional`)
+* **Repository (`repository`)**: `EntityManager`를 직접 사용하여 JPA 영속성 관리
+* **Domain (`domain`)**: 엔티티와 핵심 비즈니스 로직 보관 (모든 계층에서 참조)
+
+### 3.2 도메인 모델 패턴과 핵심 비즈니스 로직
+
+비즈니스 로직 대부분을 서비스 계층이 아닌 **엔티티 내부**에 응집시키고, 서비스 계층은 단순히 엔티티에 필요한 요청을 위임하는 구조를 **도메인 모델 패턴(Domain Model Pattern)**이라 한다.
+
+```java
+// Item 엔티티: 재고 증가/감소 비즈니스 로직
+public void addStock(int quantity) {
+    this.stockQuantity += quantity;
+}
+
+public void removeStock(int quantity) {
+    int restStock = this.stockQuantity - quantity;
+    if (restStock < 0) {
+        throw new NotEnoughStockException("need more stock");
+    }
+    this.stockQuantity = restStock;
+}
+```
+
+```java
+// Order 엔티티: 생성 메서드 & 주문 취소 로직
+public static Order createOrder(Member member, Delivery delivery, OrderItem... orderItems) {
+    Order order = new Order();
+    order.setMember(member);
+    order.setDelivery(delivery);
+    for (OrderItem orderItem : orderItems) {
+        order.addOrderItem(orderItem);
+    }
+    order.setStatus(OrderStatus.ORDER);
+    order.setOrderDate(LocalDateTime.now());
+    return order;
+}
+
+public void cancel() {
+    if (delivery.getStatus() == DeliveryStatus.COMP) {
+        throw new IllegalStateException("이미 배송완료된 상품은 취소가 불가능합니다.");
+    }
+    this.setStatus(OrderStatus.CANCEL);
+    for (OrderItem orderItem : orderItems) {
+        orderItem.cancel(); // 각 주문상품의 재고 원복
+    }
+}
+```
+
+> [!TIP]
+> **동시성 이슈 방지**
+> `MemberService.validateDuplicateMember()`처럼 애플리케이션에서 중복 회원을 검증하더라도 멀티 쓰레드 환경에서는 동시에 통과할 수 있으므로, DB 테이블의 회원명 컬럼에 **유니크(UNIQUE) 제약 조건**을 함께 추가하는 것이 안전하다.
+
+### 3.3 동적 쿼리의 한계 (JPQL 문자열 조합 vs JPA Criteria)
+
+* **JPQL 문자열 조합**: `where`, `and`를 조건문으로 이어 붙이는 방식은 번거롭고 오타로 인한 버그가 발생하기 쉽다.
+* **JPA Criteria**: JPA 표준 스펙이지만 코드가 너무 복잡하고 직관적이지 않아 유지보수가 어렵다.
+* **실무 해결책**: **Querydsl**을 사용하여 컴파일 시점에 타입 체크가 가능한 자바 코드로 동적 쿼리를 작성한다.
