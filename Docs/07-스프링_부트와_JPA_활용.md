@@ -137,3 +137,44 @@ public void cancel() {
 * **JPQL 문자열 조합**: `where`, `and`를 조건문으로 이어 붙이는 방식은 번거롭고 오타로 인한 버그가 발생하기 쉽다.
 * **JPA Criteria**: JPA 표준 스펙이지만 코드가 너무 복잡하고 직관적이지 않아 유지보수가 어렵다.
 * **실무 해결책**: **Querydsl**을 사용하여 컴파일 시점에 타입 체크가 가능한 자바 코드로 동적 쿼리를 작성한다.
+
+## 4. 웹 계층 개발: 변경 감지와 병합 (`merge`)
+
+### 4.1 폼 객체(DTO)와 엔티티 분리
+화면 요구사항이 복잡해질수록 엔티티에 화면 전용 로직(`@NotEmpty` 등)이 침투해 지저분해진다. **화면이나 API 스펙에 맞는 전용 폼 객체(`MemberForm`, `BookForm`) / DTO를 분리**하고, 엔티티는 순수하게 유지해야 한다.
+
+### 4.2 준영속 엔티티를 수정하는 2가지 방법
+
+컨트롤러에서 폼 데이터를 받아 임의로 생성한 엔티티(`new Book()`에 `id`만 세팅한 객체)는 이미 DB에 저장된 식별자를 가지고 있으나, 영속성 컨텍스트가 관리하지 않는 **준영속 엔티티**다. 따라서 값을 바꿔도 변경 감지(Dirty Checking)가 동작하지 않는다.
+
+#### 방법 1: 변경 감지(Dirty Checking) 사용 — **실무 권장!**
+
+트랜잭션이 있는 서비스 계층에서 식별자(`id`)로 영속 상태의 엔티티를 다시 조회한 뒤, 필요한 필드만 수정한다. 커밋 시점에 `UPDATE` SQL이 자동 실행된다.
+
+```java
+@Service
+@RequiredArgsConstructor
+public class ItemService {
+    private final ItemRepository itemRepository;
+
+    @Transactional
+    public void updateItem(Long id, String name, int price, int stockQuantity) {
+        Item item = itemRepository.findOne(id); // 영속 상태 엔티티 조회
+        item.setName(name);
+        item.setPrice(price);
+        item.setStockQuantity(stockQuantity);
+    }
+}
+```
+
+#### 방법 2: 병합(`em.merge()`) 사용 — **주의!**
+
+![병합(merge) 동작 방식](./images/jpa_app_03_merge_vs_dirty.svg)
+
+1. 준영속 엔티티의 식별자 값으로 1차 캐시(없으면 DB)에서 영속 엔티티를 조회한다.
+2. 조회한 영속 엔티티의 값을 준영속 엔티티의 값으로 **모두 교체(덮어쓰기)**한다.
+3. 변경된 영속 엔티티를 반환한다. (파라미터로 넘긴 객체 자체는 여전히 준영속 상태다.)
+
+> [!WARNING]
+> **병합(`merge`)의 치명적 위험성**
+> 변경 감지는 원하는 속성만 선택해서 변경할 수 있지만, 병합은 **모든 속성을 통째로 교체**한다. 만약 수정 폼에서 일부 필드가 빠져 `null`로 넘어오면 DB 데이터도 **`null`로 업데이트**되는 심각한 장애가 발생할 수 있다. **엔티티를 변경할 때는 항상 변경 감지를 사용하자.**
