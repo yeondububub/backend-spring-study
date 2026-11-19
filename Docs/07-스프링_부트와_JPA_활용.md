@@ -194,3 +194,45 @@ public class ItemService {
   * 요청(`CreateMemberRequest`)과 응답(`MemberDto`) 모두 **별도의 DTO**를 사용한다.
   * 컬렉션 응답은 `Result<T>` 같은 **래퍼(Wrapper) 클래스**로 감싸 확장성을 확보한다.
   * 부분 수정 API는 `PUT`(전체 교체)보다 **`PATCH` 또는 `POST`**가 REST 스타일에 맞다.
+
+## 6. 지연 로딩과 조회 성능 최적화 (`xToOne` 관계)
+
+`Order -> Member` (`@ManyToOne`), `Order -> Delivery` (`@OneToOne`)처럼 `ToOne` 관계를 조회할 때의 최적화 단계다.
+
+| 버전 | 방식 | 쿼리 수 | 특징 및 장단점 |
+| :--- | :--- | :--- | :--- |
+| **V1** | 엔티티 직접 노출 | `1 + N + N` | 양방향 무한 루프(`@JsonIgnore` 필수), `Hibernate5Module` 필요. **사용 금지.** |
+| **V2** | 엔티티 조회 후 DTO 변환 | `1 + N + N` | 엔티티 노출 문제는 해결했으나 지연 로딩으로 N+1 쿼리 발생. |
+| **V3** | **페치 조인(`join fetch`) 최적화** | **`1`번** | `ToOne` 관계를 페치 조인으로 한 번에 조회. 리포지토리 재사용성 높음. |
+| **V4** | JPA에서 DTO로 바로 조회 (`new`) | `1`번 | `SELECT` 절에서 원하는 컬럼만 조회. 단, 특정 API 스펙에 종속되어 재사용성 낮음. |
+
+```java
+// V3: 페치 조인 최적화 (OrderRepository)
+public List<Order> findAllWithMemberDelivery() {
+    return em.createQuery(
+        "select o from Order o" +
+        " join fetch o.member m" +
+        " join fetch o.delivery d", Order.class)
+        .getResultList();
+}
+```
+
+```java
+// V4: DTO 직접 조회 (OrderSimpleQueryRepository 별도 분리 권장)
+public List<OrderSimpleQueryDto> findOrderDtos() {
+    return em.createQuery(
+        "select new jpabook.jpashop.repository.order.simplequery.OrderSimpleQueryDto(" +
+        "o.id, m.name, o.orderDate, o.status, d.address)" +
+        " from Order o" +
+        " join o.member m" +
+        " join o.delivery d", OrderSimpleQueryDto.class)
+        .getResultList();
+}
+```
+
+> [!TIP]
+> **쿼리 방식 선택 권장 순서**
+> 1. 우선 **엔티티를 DTO로 변환(V2)**하는 방법을 선택한다.
+> 2. 필요하면 **페치 조인(V3)**으로 성능을 최적화한다. (대부분의 성능 이슈가 여기서 해결된다.)
+> 3. 그래도 안 되면 **DTO로 직접 조회(V4)**하는 방법을 사용한다.
+> 4. 최후의 방법은 네이티브 SQL이나 스프링 `JdbcTemplate`을 사용한다.
