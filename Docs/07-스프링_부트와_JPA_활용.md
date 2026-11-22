@@ -236,3 +236,54 @@ public List<OrderSimpleQueryDto> findOrderDtos() {
 > 2. 필요하면 **페치 조인(V3)**으로 성능을 최적화한다. (대부분의 성능 이슈가 여기서 해결된다.)
 > 3. 그래도 안 되면 **DTO로 직접 조회(V4)**하는 방법을 사용한다.
 > 4. 최후의 방법은 네이티브 SQL이나 스프링 `JdbcTemplate`을 사용한다.
+
+## 7. 컬렉션 조회 최적화 (`OneToMany` 관계)
+
+`Order -> OrderItem -> Item`처럼 **일대다(컬렉션) 관계**가 포함되면 데이터 뻥튀기(row 수 증가)와 페이징 이슈가 발생한다.
+
+### 7.1 V1 ~ V6 단계별 비교
+
+| 버전 | 전략 | 쿼리 수 | 페이징 | 핵심 특징 |
+| :--- | :--- | :--- | :--- | :--- |
+| **V1** | 엔티티 직접 노출 | `1 + N + N + ...` | 가능 | 무한 루프 및 엔티티 노출 문제. |
+| **V2** | 엔티티 조회 → DTO 변환 | `1 + N + N + ...` | 가능 | 지연 로딩으로 SQL이 과도하게 실행됨. |
+| **V3** | 컬렉션 페치 조인 (`distinct`) | `1`번 | **불가능** | `distinct`로 중복 제거. 단, **메모리 페이징(OOM 위험)** 발생 및 컬렉션 2개 이상 페치 조인 불가. |
+| **V3.1** | **`ToOne` 페치 조인 + `batch_fetch_size`** | **`1 + 1` (+1)** | **가능** | **실무 최우선 권장!** `ToOne`은 페치 조인하고, 컬렉션은 지연 로딩 + `IN` 쿼리 배치 조회. |
+| **V4** | DTO 직접 조회 (컬렉션 별도) | `1 + N` | 가능 | 단건 조회 시 유용. 다건 조회 시 N+1 발생. |
+| **V5** | DTO 직접 조회 (`IN` + `Map` 최적화) | `1 + 1` | 가능 | `orderIds`를 모아 `IN` 절로 한 번에 조회 후 메모리에서 `Map`으로 조립. |
+| **V6** | DTO 직접 조회 (플랫 데이터 `JOIN`) | `1`번 | **불가능** | 조인 결과를 한 번에 받고 애플리케이션에서 `groupingBy`로 재조립. 중복 데이터 전송량 증가. |
+
+### 7.2 V3.1: 페이징과 한계 돌파 (가장 중요한 실무 패턴)
+
+컬렉션을 페치 조인하면 `다(N)` 기준으로 row가 늘어나 DB 페이징(`LIMIT`, `OFFSET`)이 불가능해진다. 하이버네이트는 경고 로그를 남기며 **전체 데이터를 DB에서 읽어와 메모리에서 페이징**하므로 장애로 이어질 수 있다.
+
+**해결 공식:**
+1. **`ToOne`(`OneToOne`, `ManyToOne`) 관계는 모두 페치 조인**한다. (`ToOne`은 row 수를 증가시키지 않으므로 페이징에 영향을 주지 않는다.)
+2. **컬렉션(`OneToMany`)은 지연 로딩**으로 유지한다.
+3. **`hibernate.default_batch_fetch_size`** (글로벌 설정) 또는 **`@BatchSize`** (개별 설정)를 적용한다.
+
+```yaml
+spring:
+  jpa:
+    properties:
+      hibernate:
+        default_batch_fetch_size: 1000 # 100 ~ 1000 사이 권장
+```
+
+```java
+// V3.1 컨트롤러: ToOne만 페치 조인 + DB 페이징 적용
+public List<Order> findAllWithMemberDelivery(int offset, int limit) {
+    return em.createQuery(
+        "select o from Order o" +
+        " join fetch o.member m" +
+        " join fetch o.delivery d", Order.class)
+        .setFirstResult(offset)
+        .setMaxResults(limit)
+        .getResultList();
+}
+```
+
+* **장점**:
+  * 쿼리 호출 수가 `1 + N` → **`1 + 1`** 수준으로 최적화된다 (`IN (?, ?, ...)` 쿼리 실행).
+  * 조인에 의한 중복 데이터 전송이 없어 DB 네트워크 전송량이 오히려 V3보다 감소한다.
+  * **DB 단에서 정확한 페이징(`setFirstResult`, `setMaxResults`)이 가능**하다.
