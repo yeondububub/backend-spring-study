@@ -287,3 +287,37 @@ public List<Order> findAllWithMemberDelivery(int offset, int limit) {
   * 쿼리 호출 수가 `1 + N` → **`1 + 1`** 수준으로 최적화된다 (`IN (?, ?, ...)` 쿼리 실행).
   * 조인에 의한 중복 데이터 전송이 없어 DB 네트워크 전송량이 오히려 V3보다 감소한다.
   * **DB 단에서 정확한 페이징(`setFirstResult`, `setMaxResults`)이 가능**하다.
+
+## 8. 실무 필수 최적화: OSIV와 아키텍처 분리
+
+### 8.1 OSIV (Open Session In View / Open EntityManager In View)
+
+`spring.jpa.open-in-view` 설정(기본값 `true`)에 따라 영속성 컨텍스트와 DB 커넥션의 생존 범위가 달라진다.
+
+#### OSIV ON (`true`, 기본값)
+
+![OSIV ON 동작 범위](./images/jpa_app_04_osiv_on.svg)
+
+* **장점**: 최초 DB 커넥션 시작 시점부터 API 응답이 끝날 때까지 영속성 컨텍스트와 DB 커넥션을 유지하므로, **컨트롤러나 뷰 템플릿에서도 지연 로딩이 가능**하다.
+* **단점**: 컨트롤러에서 외부 API를 호출하는 등 응답이 지연되면 **DB 커넥션을 너무 오래 점유**해, 실시간 트래픽이 많은 서비스에서는 **커넥션 풀 고갈로 인한 장애**로 이어질 수 있다.
+
+#### OSIV OFF (`false`)
+
+![OSIV OFF 동작 범위](./images/jpa_app_05_osiv_off.svg)
+
+* **장점**: 트랜잭션을 종료할 때 영속성 컨텍스트를 닫고 **DB 커넥션을 즉시 반환**하므로 커넥션 리소스를 낭비하지 않는다.
+* **단점**: 트랜잭션 밖(컨트롤러, 뷰)에서는 엔티티가 **준영속 상태**가 되므로 지연 로딩이 불가능하다. 모든 지연 로딩을 트랜잭션 안에서 강제 초기화하거나 페치 조인/DTO 변환을 끝내야 한다.
+
+### 8.2 Command와 Query의 분리
+
+실무에서 OSIV를 끈 상태(`false`)로 복잡성을 관리하려면 **핵심 비즈니스 로직(Command)**과 **화면/API 맞춤 조회(Query)**를 분리하는 것이 유리하다.
+
+* **`OrderService`**: 핵심 비즈니스 로직 (등록, 수정, 취소)
+* **`OrderQueryService`**: 화면이나 API 스펙에 맞춘 조회 전용 서비스 (`@Transactional(readOnly = true)` 트랜잭션 안에서 지연 로딩 및 DTO 변환 완료)
+
+> [!TIP]
+> **실무 권장**: 고객 대상의 실시간 트래픽 API는 **OSIV를 끄고(`false`)**, 커넥션 사용량이 적은 관리자(Admin) 백오피스 등에서는 생산성을 위해 **OSIV를 켜는(`true`)** 전략을 상황에 맞게 선택한다.
+
+### 8.3 스프링 데이터 JPA & Querydsl로의 확장
+* **스프링 데이터 JPA**: `JpaRepository<Member, Long>` 인터페이스 상속만으로 기본 CRUD 및 메서드 이름 기반 쿼리(`findByName`)를 프록시로 자동 구현해 준다. (단, JPA 자체의 동작 원리를 먼저 이해하는 것이 필수다.)
+* **Querydsl**: JPQL을 자바 코드로 작성하는 빌더로, 컴파일 시점 문법 오류 검출, 코드 자동완성, 조건 메서드 재사용(`BooleanExpression`), 깔끔한 동적 쿼리 작성을 지원한다.
