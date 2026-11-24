@@ -65,3 +65,29 @@ logging.level:
 | **기본 생성자** | `@NoArgsConstructor(access = AccessLevel.PROTECTED)` | JPA 스펙 표준상 기본 생성자는 필수이나, 객체의 외부 직접 생성을 차단하기 위해 생성자 접근 수준을 PROTECTED로 제한한다. |
 | **ToString 설정** | `@ToString(of = {"id", "username", "age"})` | 양방향 연관관계가 설정된 엔티티 필드를 ToString 대상에 포함할 경우 상호 호출에 의한 순환 참조(무한 루프)가 발생하므로 자체 필드만 지정한다. |
 | **연관관계 메서드**| `changeTeam(Team team)` | 객체 상태와 연관관계 편의성을 위해 양쪽 객체의 참조를 한 번에 안전하게 설정하는 편의 메서드를 작성한다. |
+
+## 3. 공통 인터페이스 기능
+
+스프링 데이터 JPA는 상투적으로 반복되는 기본 CRUD 코드를 제거하고, 인터페이스 선언만으로 데이터 접근 계층(DAO)을 자동으로 완성하는 공통 인터페이스 기능을 제공한다.
+
+### 순수 JPA 리포지토리와의 구조적 비교
+
+- **순수 JPA 기반 리포지토리 (`MemberJpaRepository`)**: `@PersistenceContext`를 활용해 `EntityManager`를 주입받은 후 `em.persist()`, `em.remove()`, `em.find()`, 그리고 JPQL 구문을 통해 `findAll()` 및 `count()` 메서드를 직접 개발자가 작성해야 했다.
+- **스프링 데이터 JPA 리포지토리 (`MemberRepository`)**: `public interface MemberRepository extends JpaRepository<Member, Long>`과 같이 인터페이스를 선언하면, 스프링 데이터 JPA가 애플리케이션 실행 시점에 동적 프록시 기술로 구현 클래스를 자동 생성하여 스프링 빈으로 등록한다 (`@Repository` 애노테이션 생략 가능).
+
+### 공통 인터페이스 계층 구조
+
+스프링 데이터 공통 기술 패키지에서 출발하여 JPA 특화 기능으로 확장되는 계층적 인터페이스 구조를 갖는다.
+
+- `org.springframework.data.repository.Repository` (최상위 마커 인터페이스)
+  - `CrudRepository` (기본 생성, 조회, 수정, 삭제 기능 제공)
+    - `PagingAndSortingRepository` (정렬 및 페이징 기능 추가)
+      - `org.springframework.data.jpa.repository.JpaRepository` (JPA 특화 메서드 제공: `findAll()`, `saveAndFlush()`, `deleteInBatch()` 등)
+
+### 주요 제공 메서드 동작 특성
+
+- `save(S)`: 새로운 엔티티인 경우 저장(`persist`)하고, 이미 존재하는 엔티티인 경우 병합(`merge`)을 실행한다.
+- `delete(T)`: 엔티티 단건을 삭제하며 내부적으로 `EntityManager.remove()`를 수행한다.
+- `findById(ID)`: 식별자를 기반으로 엔티티를 조회하고 `Optional<T>`으로 반환한다 (내부적으로 `EntityManager.find()` 호출).
+- `getOne(ID)`: 엔티티를 프록시 객체 상태로 조회한다 (내부적으로 `EntityManager.getReference()` 호출).
+- `findAll(...)`: 조건 없이 모든 엔티티를 조회하거나, `Sort` 및 `Pageable` 파라미터를 적용하여 정렬 및 페이징 조회를 수행한다.
