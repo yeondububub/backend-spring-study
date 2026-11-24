@@ -45,3 +45,23 @@ logging.level:
 - `ddl-auto: create`: 애플리케이션 시작 시점에 기존 스키마를 drop하고 엔티티 매핑 정보를 기반으로 테이블을 재생성한다.
 - `logging.level.org.hibernate.SQL: debug`: 하이버네이트가 생성하는 SQL을 로거를 통해 남긴다.
 - **IntelliJ 실행 속도 최적화**: IntelliJ IDEA 환경에서 Gradle을 통한 애플리케이션 실행 방식을 `IntelliJ IDEA` 자바 직접 실행 옵션(Preferences -> Build Tools -> Gradle -> Build and run using: IntelliJ IDEA)으로 변경하면 실행 속도를 대폭 향상시킬 수 있다.
+
+## 2. 예제 도메인 모델
+
+데이터 접근 기술을 검증하기 위한 도메인 모델은 회원(`Member`)과 팀(`Team`) 간의 다대일(N:1) 양방향 연관관계를 중심으로 설계한다.
+
+### 엔티티 구조 및 양방향 매핑 설계
+
+- **Member 엔티티**: 식별자(`member_id`), 회원명(`username`), 나이(`age`), 팀 참조(`team`) 필드로 구성된다. 지연 로딩을 위해 `@ManyToOne(fetch = FetchType.LAZY)`을 지정하고 `@JoinColumn(name = "team_id")`을 선언하여 데이터베이스 외래키(FK)의 등록 및 수정 권한을 갖는 연관관계의 주인이 된다.
+- **Team 엔티티**: 식별자(`team_id`), 팀명(`name`), 회원 목록(`members`) 필드로 구성된다. `@OneToMany(mappedBy = "team")`을 부착하여 `Member.team` 연관관계 주인에 대응하는 읽기 전용 참조 관계를 구성한다.
+
+### 롬복(Lombok) 활용 및 엔티티 구현 수칙
+
+단순한 코드 절감을 넘어 JPA 동작 메커니즘을 고려한 엔티티 구현 규칙은 다음과 같다.
+
+| 구 분 | 사용 애노테이션 및 설정 | 실무 설계 수칙 및 사유 |
+| :--- | :--- | :--- |
+| **Setter 관리** | `@Setter` 사용 금지 또는 최소화 | 엔티티 인스턴스의 무분별한 상태 변경을 방지하고 비즈니스 메서드로 변경 지점을 명확히 제어한다. |
+| **기본 생성자** | `@NoArgsConstructor(access = AccessLevel.PROTECTED)` | JPA 스펙 표준상 기본 생성자는 필수이나, 객체의 외부 직접 생성을 차단하기 위해 생성자 접근 수준을 PROTECTED로 제한한다. |
+| **ToString 설정** | `@ToString(of = {"id", "username", "age"})` | 양방향 연관관계가 설정된 엔티티 필드를 ToString 대상에 포함할 경우 상호 호출에 의한 순환 참조(무한 루프)가 발생하므로 자체 필드만 지정한다. |
+| **연관관계 메서드**| `changeTeam(Team team)` | 객체 상태와 연관관계 편의성을 위해 양쪽 객체의 참조를 한 번에 안전하게 설정하는 편의 메서드를 작성한다. |
